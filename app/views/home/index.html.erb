@@ -1,0 +1,103 @@
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+<script type="text/javascript">
+  function isNumber(x){ 
+      if( typeof(x) != 'number' && typeof(x) != 'string' )
+          return false;
+      else 
+          return (x == parseFloat(x) && isFinite(x));
+  }
+
+  function send_coin(button) {
+    //入力内容チェック
+    send_to_address = $("#input_to_adrress").val()
+    if (send_to_address == "") {
+      jQuery("#send_message").text("送り先アドレスが入力されておりません");	
+      button.disabled = false
+      exit
+    }
+
+    send_amount = $("#input_amount").val()
+    send_message = $("#input_message").val()
+    if (!isNumber(send_amount) || send_amount <= 0) {
+      jQuery("#send_message").text("有効な金額ではありません");	
+      button.disabled = false
+      exit;
+    }
+
+    button.disabled = true
+    jQuery("#send_message").text("データ送信中です");	
+    $.ajax({
+      type: 'post',
+      url: '/send_money',
+      timeout:5000,
+      data: { send_to_address: send_to_address, send_amount: send_amount, send_message: send_message },
+      beforeSend: function(jqXHR, settings) {
+          jqXHR.setRequestHeader('X-CSRF-Token', $('meta[name="csrf-token"]').attr('content'));
+      },
+      success: function(data){
+        if (data.success != true) {
+          button.disabled = false
+          jQuery("#send_message").text(data.error)
+        } else {
+          jQuery("#send_message").text("送信完了")
+	}
+      },
+      error: function(data) {
+        jQuery("#send_message").text("送信に失敗しました");	
+        button.disabled = false
+      }
+    });
+  }
+</script>
+
+
+
+<h1 style="color:green">BitCapitalZ OAuth API Test Tool</h1>
+<br><br>
+<% if current_user != nil %>
+<%= link_to "Sign out", destroy_user_session_path, :class => "btn primary" %>
+<br><br>
+ monacoin balance is <%= @monacoin_balance %>
+<br><br>
+ monacoin address is <%= @monacoin_address %>
+<br><br>
+<form class="form-horizontal" id="send_coin">
+  <fieldset>
+    <legend>送金(BitCapitalZ以外のアドレスへの送金手数料: <%= 0.01 %>Mona)</legend>
+    <div class="form-group">
+      <label for="input_to_adrress" class="col-lg-2 control-label">送り先アドレス</label>
+      <div class="col-lg-5">
+        <input type="text" class="form-control"  id="input_to_adrress" name="" required>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="input_amount" class="col-lg-2 control-label">金額</label>
+      <div class="col-lg-5">
+        <input type="number" class="form-control" id="input_amount" name="" required>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="inputPassword" class="col-lg-2 control-label">メモ(bitcapitalzのアドレスに送る場合は送った相手も見れます)</label>
+      <div class="col-lg-5">
+        <textarea class="form-control" id="input_message" name=""></textarea>
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="col-lg-3 col-lg-offset-2">
+        <button class="btn btn-primary" type="button" onclick="send_coin(this)">送る</button>
+      </div>
+      <div class="col-lg-6 col-lg-offset-2">
+        <div id="send_message"></div> <!-- この send_messageという divタグは送金結果を表示するので消してはならない -->
+      </div>
+    </div>
+  </fieldset>
+</form>
+
+<% else %>
+<div class="row">
+<div class="col-lg-6">
+<%= link_to "BitCapitalZ の OAuth 認証をする", user_omniauth_authorize_path(:doorkeeper) %>
+</div>
+</div>
+<% end %>
+<br>
